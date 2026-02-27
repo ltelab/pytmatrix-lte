@@ -1,24 +1,24 @@
-"""
-Copyright (C) 2009-2023 Jussi Leinonen, Finnish Meteorological Institute,
-California Institute of Technology
+# Copyright (C) 2009-2015 Jussi Leinonen, Finnish Meteorological Institute,
+# California Institute of Technology
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
+# Permission is hereby granted, free of charge, to any person obtaining a copy of
+# this software and associated documentation files (the "Software"), to deal in
+# the Software without restriction, including without limitation the rights to
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+# the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-"""
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+# FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""Particle size distribution models and integration helpers."""
+
 import sys
 from datetime import datetime
 
@@ -27,63 +27,117 @@ try:
 except ImportError:
     import pickle
 import warnings
+
 import numpy as np
 from scipy.integrate import trapezoid
 from scipy.special import gamma
-import pytmatrix.scatter as scatter
-import pytmatrix.tmatrix_aux as tmatrix_aux
+
+from pytmatrix import scatter, tmatrix_aux
 
 
 class PSD:
+    """Base class for particle size distribution callables."""
+
     def __call__(self, D):
+        """Evaluate the PSD.
+
+        Parameters
+        ----------
+        D : float or array-like
+            Particle diameter in millimeters.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            PSD values with the same shape as ``D``.
+        """
         if np.shape(D) == ():
             return 0.0
-        else:
-            return np.zeros_like(D)
+        return np.zeros_like(D)
 
     def __eq__(self, other):
+        """Compare two PSD objects.
+
+        Parameters
+        ----------
+        other : object
+            Object to compare against.
+
+        Returns
+        -------
+        bool
+            ``True`` when objects are considered equivalent.
+        """
         return False
 
 
 class ExponentialPSD(PSD):
     """Exponential particle size distribution (PSD).
 
-    Callable class to provide an exponential PSD with the given
-    parameters. The attributes can also be given as arguments to the
-    constructor.
+    Callable class implementing:
 
-    The PSD form is:
-    N(D) = N0 * exp(-Lambda*D)
+    ``N(D) = N0 * exp(-Lambda * D)``.
 
-    Attributes:
-        N0: the intercept parameter.
-        Lambda: the inverse scale parameter
-        D_max: the maximum diameter to consider (defaults to 11/Lambda,
-            i.e. approx. 3*D0, if None)
-
-    Args (call):
-        D: the particle diameter.
-
-    Returns (call):
-        The PSD value for the given diameter.
-        Returns 0 for all diameters larger than D_max.
+    Attributes
+    ----------
+    N0 : float
+        Intercept parameter.
+    Lambda : float
+        Inverse scale parameter.
+    D_max : float
+        Maximum diameter considered by :meth:`__call__`.
     """
 
     def __init__(self, N0=1.0, Lambda=1.0, D_max=None):
+        """Initialize an exponential PSD.
+
+        Parameters
+        ----------
+        N0 : float, default=1.0
+            Intercept parameter.
+        Lambda : float, default=1.0
+            Inverse scale parameter.
+        D_max : float or None, default=None
+            Maximum diameter. If ``None``, ``11/Lambda`` is used.
+        """
         self.N0 = float(N0)
         self.Lambda = float(Lambda)
         self.D_max = 11.0 / Lambda if D_max is None else D_max
 
     def __call__(self, D):
+        """Evaluate the exponential PSD.
+
+        Parameters
+        ----------
+        D : float or array-like
+            Particle diameter in millimeters.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            PSD values, set to zero for ``D > D_max``.
+        """
         psd = self.N0 * np.exp(-self.Lambda * D)
         if np.shape(D) == ():
-            if D > self.D_max:
+            if self.D_max < D:
                 return 0.0
         else:
-            psd[D > self.D_max] = 0.0
+            psd[self.D_max < D] = 0.0
         return psd
 
     def __eq__(self, other):
+        """Compare two exponential PSD parameterizations.
+
+        Parameters
+        ----------
+        other : object
+            Object to compare against.
+
+        Returns
+        -------
+        bool
+            ``True`` when both objects are equivalent.
+        """
         try:
             return (
                 isinstance(other, ExponentialPSD)
@@ -98,43 +152,74 @@ class ExponentialPSD(PSD):
 class UnnormalizedGammaPSD(ExponentialPSD):
     """Gamma particle size distribution (PSD).
 
-    Callable class to provide an gamma PSD with the given
-    parameters. The attributes can also be given as arguments to the
-    constructor.
+    Callable class implementing:
 
-    The PSD form is:
-    N(D) = N0 * D**mu * exp(-Lambda*D)
+    ``N(D) = N0 * D**mu * exp(-Lambda * D)``.
 
-    Attributes:
-        N0: the intercept parameter.
-        Lambda: the inverse scale parameter
-        mu: the shape parameter
-        D_max: the maximum diameter to consider (defaults to 11/Lambda,
-            i.e. approx. 3*D0, if None)
-
-    Args (call):
-        D: the particle diameter.
-
-    Returns (call):
-        The PSD value for the given diameter.
-        Returns 0 for all diameters larger than D_max.
+    Attributes
+    ----------
+    N0 : float
+        Intercept parameter.
+    Lambda : float
+        Inverse scale parameter.
+    mu : float
+        Shape parameter.
+    D_max : float
+        Maximum diameter considered by :meth:`__call__`.
     """
 
     def __init__(self, N0=1.0, Lambda=1.0, mu=0.0, D_max=None):
+        """Initialize an unnormalized gamma PSD.
+
+        Parameters
+        ----------
+        N0 : float, default=1.0
+            Intercept parameter.
+        Lambda : float, default=1.0
+            Inverse scale parameter.
+        mu : float, default=0.0
+            Shape parameter.
+        D_max : float or None, default=None
+            Maximum diameter. If ``None``, ``11/Lambda`` is used.
+        """
         super().__init__(N0=N0, Lambda=Lambda, D_max=D_max)
         self.mu = mu
 
     def __call__(self, D):
+        """Evaluate the unnormalized gamma PSD.
+
+        Parameters
+        ----------
+        D : float or array-like
+            Particle diameter in millimeters.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            PSD values, set to zero for ``D > D_max`` and ``D == 0``.
+        """
         # For large mu, this is better numerically than multiplying by D**mu
         psd = self.N0 * np.exp(self.mu * np.log(D) - self.Lambda * D)
         if np.shape(D) == ():
-            if (D > self.D_max) or (D == 0):
+            if (self.D_max < D) or (D == 0):
                 return 0.0
         else:
-            psd[(D > self.D_max) | (D == 0)] = 0.0
+            psd[(self.D_max < D) | (D == 0)] = 0.0
         return psd
 
     def __eq__(self, other):
+        """Compare two unnormalized gamma PSD parameterizations.
+
+        Parameters
+        ----------
+        other : object
+            Object to compare against.
+
+        Returns
+        -------
+        bool
+            ``True`` when both objects are equivalent.
+        """
         try:
             return super().__eq__(other) and self.mu == other.mu
         except AttributeError:
@@ -144,30 +229,38 @@ class UnnormalizedGammaPSD(ExponentialPSD):
 class GammaPSD(PSD):
     """Normalized gamma particle size distribution (PSD).
 
-    Callable class to provide a normalized gamma PSD with the given
-    parameters. The attributes can also be given as arguments to the
-    constructor.
+    Callable class implementing:
 
-    The PSD form is:
-    N(D) = Nw * f(mu) * (D/D0)**mu * exp(-(3.67+mu)*D/D0)
-    f(mu) = 6/(3.67**4) * (3.67+mu)**(mu+4)/Gamma(mu+4)
+    ``N(D) = Nw * f(mu) * (D/D0)**mu * exp(-(3.67+mu)*D/D0)``,
+    with
+    ``f(mu) = 6/(3.67**4) * (3.67+mu)**(mu+4)/Gamma(mu+4)``.
 
-    Attributes:
-        D0: the median volume diameter.
-        Nw: the intercept parameter.
-        mu: the shape parameter.
-        D_max: the maximum diameter to consider (defaults to 3*D0 when
-            if None)
-
-    Args (call):
-        D: the particle diameter.
-
-    Returns (call):
-        The PSD value for the given diameter.
-        Returns 0 for all diameters larger than D_max.
+    Attributes
+    ----------
+    D0 : float
+        Median volume diameter.
+    Nw : float
+        Intercept parameter.
+    mu : float
+        Shape parameter.
+    D_max : float
+        Maximum diameter considered by :meth:`__call__`.
     """
 
     def __init__(self, D0=1.0, Nw=1.0, mu=0.0, D_max=None):
+        """Initialize a normalized gamma PSD.
+
+        Parameters
+        ----------
+        D0 : float, default=1.0
+            Median volume diameter.
+        Nw : float, default=1.0
+            Intercept parameter.
+        mu : float, default=0.0
+            Shape parameter.
+        D_max : float or None, default=None
+            Maximum diameter. If ``None``, ``3*D0`` is used.
+        """
         self.D0 = float(D0)
         self.mu = float(mu)
         self.D_max = 3.0 * D0 if D_max is None else D_max
@@ -175,16 +268,40 @@ class GammaPSD(PSD):
         self.nf = Nw * 6.0 / 3.67**4 * (3.67 + mu) ** (mu + 4) / gamma(mu + 4)
 
     def __call__(self, D):
+        """Evaluate the normalized gamma PSD.
+
+        Parameters
+        ----------
+        D : float or array-like
+            Particle diameter in millimeters.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            PSD values, set to zero for ``D > D_max`` and ``D == 0``.
+        """
         d = D / self.D0
         psd = self.nf * np.exp(self.mu * np.log(d) - (3.67 + self.mu) * d)
         if np.shape(D) == ():
-            if (D > self.D_max) or (D == 0.0):
+            if (self.D_max < D) or (D == 0.0):
                 return 0.0
         else:
-            psd[(D > self.D_max) | (D == 0.0)] = 0.0
+            psd[(self.D_max < D) | (D == 0.0)] = 0.0
         return psd
 
     def __eq__(self, other):
+        """Compare two normalized gamma PSD parameterizations.
+
+        Parameters
+        ----------
+        other : object
+            Object to compare against.
+
+        Returns
+        -------
+        bool
+            ``True`` when both objects are equivalent.
+        """
         try:
             return (
                 isinstance(other, GammaPSD)
@@ -203,19 +320,22 @@ class BinnedPSD(PSD):
     Callable class to provide a binned PSD with the given bin edges and PSD
     values.
 
-    Args (constructor):
-        The first argument to the constructor should specify n+1 bin edges,
-        and the second should specify n bin_psd values.
-
-    Args (call):
-        D: the particle diameter.
-
-    Returns (call):
-        The PSD value for the given diameter.
-        Returns 0 for all diameters outside the bins.
+    Notes
+    -----
+    Constructor inputs should contain ``n + 1`` bin edges and ``n`` bin
+    values.
     """
 
     def __init__(self, bin_edges, bin_psd):
+        """Initialize a binned PSD.
+
+        Parameters
+        ----------
+        bin_edges : array-like
+            Bin-edge diameters of length ``n + 1``.
+        bin_psd : array-like
+            Constant PSD values for each bin of length ``n``.
+        """
         if len(bin_edges) != len(bin_psd) + 1:
             raise ValueError("There must be n+1 bin edges for n bins.")
 
@@ -223,6 +343,18 @@ class BinnedPSD(PSD):
         self.bin_psd = bin_psd
 
     def psd_for_D(self, D):
+        """Return the PSD value for a scalar diameter.
+
+        Parameters
+        ----------
+        D : float
+            Particle diameter in millimeters.
+
+        Returns
+        -------
+        float
+            Bin value associated with ``D``; returns ``0.0`` outside the bins.
+        """
         if not (self.bin_edges[0] < D <= self.bin_edges[-1]):
             return 0.0
 
@@ -239,12 +371,35 @@ class BinnedPSD(PSD):
         return self.bin_psd[start]
 
     def __call__(self, D):
+        """Evaluate the binned PSD.
+
+        Parameters
+        ----------
+        D : float or array-like
+            Particle diameter in millimeters.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            PSD values corresponding to each diameter.
+        """
         if np.shape(D) == ():  # D is a scalar
             return self.psd_for_D(D)
-        else:
-            return np.array([self.psd_for_D(d) for d in D])
+        return np.array([self.psd_for_D(d) for d in D])
 
     def __eq__(self, other):
+        """Compare two binned PSD definitions.
+
+        Parameters
+        ----------
+        other : object
+            Object to compare against.
+
+        Returns
+        -------
+        bool
+            ``True`` when both bin edges and bin values are identical.
+        """
         if other is None:
             return False
         return (
@@ -271,28 +426,31 @@ class PSDIntegrator:
     the Scatterer instance must be set to one of those specified in the
     "geometries" attribute.
 
-    Attributes:
-
-        num_points: the number of points for which to sample the PSD and
-            scattering properties for; default num_points=1024 should be good
-            for most purposes
-        m_func: set to a callable object giving the refractive index as a
-            function of diameter, or None to use the "m" attribute of the
-            Scatterer for all sizes; default None
-        axis_ratio_func: set to a callable object giving the aspect ratio
-            (horizontal to rotational) as a function of diameter, or None to
-            use the "axis_ratio" attribute for all sizes; default None
-        D_max: set to the maximum single scatterer size that is desired to be
-            used (usually the D_max corresponding to the largest PSD you
-            intend to use)
-        geometries: tuple containing the scattering geometry tuples that are
-            initialized (thet0, thet, phi0, phi, alpha, beta);
-            default horizontal backscatter
+    Attributes
+    ----------
+    num_points : int
+        Number of diameters used to sample PSD and scattering properties.
+    m_func : callable or None
+        Optional refractive-index function of diameter.
+    axis_ratio_func : callable or None
+        Optional axis-ratio function of diameter.
+    D_max : float or None
+        Maximum scatterer diameter used in table initialization.
+    geometries : tuple
+        Geometry tuples ``(thet0, thet, phi0, phi, alpha, beta)`` to
+        precompute.
     """
 
     attrs = {"num_points", "m_func", "axis_ratio_func", "D_max", "geometries"}
 
     def __init__(self, **kwargs):
+        """Initialize a PSD integrator.
+
+        Parameters
+        ----------
+        **kwargs
+            Optional overrides for class attributes in ``PSDIntegrator.attrs``.
+        """
         self.num_points = 1024
         self.m_func = None
         self.axis_ratio_func = None
@@ -309,14 +467,36 @@ class PSDIntegrator:
         self._previous_psd = None
 
     def __call__(self, psd, geometry):
+        """Integrate scattering matrices for a PSD at one geometry.
+
+        Parameters
+        ----------
+        psd : PSD
+            Particle size distribution instance.
+        geometry : tuple
+            Geometry tuple ``(thet0, thet, phi0, phi, alpha, beta)``.
+
+        Returns
+        -------
+        tuple
+            ``(S, Z)`` amplitude and phase matrices.
+        """
         return self.get_SZ(psd, geometry)
 
     def get_SZ(self, psd, geometry):
-        """
-        Compute the scattering matrices for the given PSD and geometries.
+        """Compute scattering matrices for a PSD and geometry.
 
-        Returns:
-            The new amplitude (S) and phase (Z) matrices.
+        Parameters
+        ----------
+        psd : PSD
+            Particle size distribution instance.
+        geometry : tuple
+            Geometry tuple ``(thet0, thet, phi0, phi, alpha, beta)``.
+
+        Returns
+        -------
+        tuple
+            Amplitude and phase matrices ``(S, Z)``.
         """
         if (self._S_table is None) or (self._Z_table is None):
             raise AttributeError("Initialize or load the scattering table first.")
@@ -335,10 +515,28 @@ class PSDIntegrator:
         return (self._S_dict[geometry], self._Z_dict[geometry])
 
     def get_angular_integrated(self, psd, geometry, property_name, h_pol=True):
+        """Integrate an angular scattering property over a PSD.
+
+        Parameters
+        ----------
+        psd : PSD
+            Particle size distribution instance.
+        geometry : tuple
+            Geometry tuple ``(thet0, thet, phi0, phi, alpha, beta)``.
+        property_name : {"sca_xsect", "ext_xsect", "asym"}
+            Name of the angular quantity to integrate.
+        h_pol : bool, default=True
+            Polarization selector. Horizontal when ``True``, vertical when
+            ``False``.
+
+        Returns
+        -------
+        float
+            PSD-integrated value of the requested quantity.
+        """
         if self._angular_table is None:
             raise AttributeError(
-                "Initialize or load the table of angular-integrated "
-                + "quantities first."
+                "Initialize or load the table of angular-integrated " + "quantities first.",
             )
 
         pol = "h_pol" if h_pol else "v_pol"
@@ -346,14 +544,16 @@ class PSDIntegrator:
 
         def sca_xsect(geom):
             return trapezoid(
-                self._angular_table["sca_xsect"][pol][geom] * psd_w, self._psd_D
+                self._angular_table["sca_xsect"][pol][geom] * psd_w,
+                self._psd_D,
             )
 
         if property_name == "sca_xsect":
             sca_prop = sca_xsect(geometry)
         elif property_name == "ext_xsect":
             sca_prop = trapezoid(
-                self._angular_table["ext_xsect"][pol][geometry] * psd_w, self._psd_D
+                self._angular_table["ext_xsect"][pol][geometry] * psd_w,
+                self._psd_D,
             )
         elif property_name == "asym":
             sca_xsect_int = sca_xsect(geometry)
@@ -379,19 +579,20 @@ class PSDIntegrator:
         and additionally, all the desired attributes of the Scatterer class
         (e.g. wavelength, aspect ratio).
 
-        Args:
-            tm: a Scatterer instance.
-            angular_integration: If True, also calculate the
-                angle-integrated quantities (scattering cross section,
-                extinction cross section, asymmetry parameter). These are
-                needed to call the corresponding functions in the scatter
-                module when PSD integration is active. The default is False.
-            verbose: if True, print information about the progress of the
-                calculation (which may take a while). If False (default),
-                run silently.
+        Parameters
+        ----------
+        tm : pytmatrix.tmatrix.Scatterer
+            Scatterer instance used to tabulate single-particle properties.
+        angular_integration : bool, default=False
+            If ``True``, also tabulate angular-integrated quantities
+            (scattering/extinction cross section and asymmetry parameter).
+        verbose : bool, default=False
+            If ``True``, print progress messages during table generation.
         """
         self._psd_D = np.linspace(
-            self.D_max / self.num_points, self.D_max, self.num_points
+            self.D_max / self.num_points,
+            self.D_max,
+            self.num_points,
         )
 
         self._S_table = {}
@@ -407,7 +608,7 @@ class PSDIntegrator:
         else:
             self._angular_table = None
 
-        (old_m, old_axis_ratio, old_radius, old_geom, old_psd_integrator) = (
+        old_m, old_axis_ratio, old_radius, old_geom, old_psd_integrator = (
             tm.m,
             tm.axis_ratio,
             tm.radius,
@@ -427,12 +628,12 @@ class PSDIntegrator:
                     for int_var in ["sca_xsect", "ext_xsect", "asym"]:
                         for pol in ["h_pol", "v_pol"]:
                             self._angular_table[int_var][pol][geom] = np.empty(
-                                self.num_points
+                                self.num_points,
                             )
 
             for i, D in enumerate(self._psd_D):
                 if verbose:
-                    print("Computing point {i} at D={D}...".format(i=i, D=D))
+                    print(f"Computing point {i} at D={D}...")
                 if self.m_func is not None:
                     tm.m = self.m_func(D)
                 if self.axis_ratio_func is not None:
@@ -441,25 +642,22 @@ class PSDIntegrator:
                 tm.radius = D / 2.0
                 for geom in self.geometries:
                     tm.set_geometry(geom)
-                    (S, Z) = tm.get_SZ_orient()
+                    S, Z = tm.get_SZ_orient()
                     self._S_table[geom][:, :, i] = S
                     self._Z_table[geom][:, :, i] = Z
 
                     if angular_integration:
                         for pol in ["h_pol", "v_pol"]:
                             h_pol = pol == "h_pol"
-                            self._angular_table["sca_xsect"][pol][geom][i] = (
-                                scatter.sca_xsect(tm, h_pol=h_pol)
-                            )
-                            self._angular_table["ext_xsect"][pol][geom][i] = (
-                                scatter.ext_xsect(tm, h_pol=h_pol)
-                            )
+                            self._angular_table["sca_xsect"][pol][geom][i] = scatter.sca_xsect(tm, h_pol=h_pol)
+                            self._angular_table["ext_xsect"][pol][geom][i] = scatter.ext_xsect(tm, h_pol=h_pol)
                             self._angular_table["asym"][pol][geom][i] = scatter.asym(
-                                tm, h_pol=h_pol
+                                tm,
+                                h_pol=h_pol,
                             )
         finally:
             # restore old values
-            (tm.m, tm.axis_ratio, tm.radius, tm.psd_integrator) = (
+            tm.m, tm.axis_ratio, tm.radius, tm.psd_integrator = (
                 old_m,
                 old_axis_ratio,
                 old_radius,
@@ -477,9 +675,12 @@ class PSDIntegrator:
         the results of the computations are based only on the contents
         of the table.
 
-        Args:
-           fn: The name of the scattering table file.
-           description (optional): A description of the table.
+        Parameters
+        ----------
+        fn : str or path-like
+            Output filename for the serialized lookup table.
+        description : str, default=""
+            Free-text description stored with the table metadata.
         """
         data = {
             "description": description,
@@ -506,14 +707,21 @@ class PSDIntegrator:
 
         Load the scattering lookup tables saved with save_scatter_table.
 
-        Args:
-            fn: The name of the scattering table file.
+        Parameters
+        ----------
+        fn : str or path-like
+            Input filename created by :meth:`save_scatter_table`.
+
+        Returns
+        -------
+        tuple
+            Pair ``(time, description)`` read from table metadata.
         """
         with open(fn, "rb") as f:
             data = pickle.load(f)
 
         if ("tmatrix_version" not in data) or (data["tmatrix_version"] != tmatrix_aux.VERSION):
-            warnings.warn("Loading data saved with another version.", Warning)
+            warnings.warn("Loading data saved with another version.", Warning, stacklevel=2)
 
         (
             self.num_points,

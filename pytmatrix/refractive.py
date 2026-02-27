@@ -1,30 +1,31 @@
-"""
-Copyright (C) 2009-2015 Jussi Leinonen, Finnish Meteorological Institute,
-California Institute of Technology
+# Copyright (C) 2009-2015 Jussi Leinonen, Finnish Meteorological Institute,
+# California Institute of Technology
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
+# Permission is hereby granted, free of charge, to any person obtaining a copy of
+# this software and associated documentation files (the "Software"), to deal in
+# the Software without restriction, including without limitation the rights to
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+# the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-"""
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+# FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+"""Refractive-index mixing and lookup utilities."""
 
 from os import path
+
 import numpy as np
 from scipy import interpolate
-from pytmatrix.tmatrix_aux import wl_S, wl_C, wl_X, wl_Ku, wl_Ka, wl_W
 
+from pytmatrix.tmatrix_aux import wl_C, wl_Ka, wl_Ku, wl_S, wl_W, wl_X
 
 # Water refractive indices for different bands at 0 C
 m_w_0C = {
@@ -62,32 +63,31 @@ m_w_20C = {
 # Ice density in g/cm^3
 ice_density = 0.9167
 
+
 def mg_refractive(m, mix):
     """Maxwell-Garnett EMA for the refractive index.
 
-    Args:
-       m: Tuple of the complex refractive indices of the media.
-       mix: Tuple of the volume fractions of the media, len(mix)==len(m)
-            (if sum(mix)!=1, these are taken relative to sum(mix))
+    Parameters
+    ----------
+    m : tuple of complex
+        Complex refractive indices of each medium.
+    mix : tuple of float
+        Volume fractions of each medium. Must satisfy ``len(mix) == len(m)``.
+        Fractions are normalized by ``sum(mix)``.
 
-    Returns:
-       The Maxwell-Garnett approximation for the complex refractive index of
-       the effective medium
+    Returns
+    -------
+    complex
+        Maxwell-Garnett approximation for the effective-medium refractive
+        index.
 
-    If len(m)==2, the first element is taken as the matrix and the second as
-    the inclusion. If len(m)>2, the media are mixed recursively so that the
-    last element is used as the inclusion and the second to last as the
-    matrix, then this mixture is used as the last element on the next
-    iteration, and so on.
+    Notes
+    -----
+    If ``len(m) == 2``, the first element is treated as matrix and the second
+    as inclusion. For ``len(m) > 2``, components are mixed recursively.
     """
-
     if len(m) == 2:
-        cF = (
-            float(mix[1])
-            / (mix[0] + mix[1])
-            * (m[1] ** 2 - m[0] ** 2)
-            / (m[1] ** 2 + 2 * m[0] ** 2)
-        )
+        cF = float(mix[1]) / (mix[0] + mix[1]) * (m[1] ** 2 - m[0] ** 2) / (m[1] ** 2 + 2 * m[0] ** 2)
         er = m[0] ** 2 * (1.0 + 2.0 * cF) / (1.0 - cF)
         m = np.sqrt(er)
     else:
@@ -100,8 +100,21 @@ def mg_refractive(m, mix):
 def bruggeman_refractive(m, mix):
     """Bruggeman EMA for the refractive index.
 
-    For instructions, see mg_refractive in this module, except this routine
-    only works for two components.
+    Parameters
+    ----------
+    m : tuple of complex
+        Two complex refractive indices.
+    mix : tuple of float
+        Two volume fractions.
+
+    Returns
+    -------
+    complex
+        Bruggeman effective-medium refractive index.
+
+    Notes
+    -----
+    Unlike :func:`mg_refractive`, this routine only supports two components.
     """
     f1 = mix[0] / sum(mix)
     f2 = mix[1] / sum(mix)
@@ -115,17 +128,20 @@ def bruggeman_refractive(m, mix):
 
 
 def ice_refractive(file):
-    """
-    Interpolator for the refractive indices of ice.
+    """Create an interpolator for refractive index of ice.
 
-    Inputs:
-       File to read the refractive index lookup table from.
-       This is supplied as "ice_refr.dat", retrieved from
-       http://www.atmos.washington.edu/ice_optical_constants/
+    Parameters
+    ----------
+    file : str or path-like
+        Path to refractive-index lookup table (for example
+        ``ice_refr.dat`` from
+        ``http://www.atmos.washington.edu/ice_optical_constants/``).
 
-    Returns:
-       A callable object that takes as parameters the wavelength [mm]
-       and the snow density [g/cm^3].
+    Returns
+    -------
+    callable
+        Function ``ref(wl, snow_density)`` taking wavelength in millimeters
+        and snow density in g/cm^3.
     """
     D = np.loadtxt(file)
 
@@ -145,10 +161,7 @@ def ice_refractive(file):
         else:
             mi_sqr = (
                 np.array(
-                    [
-                        complex(a, b)
-                        for (a, b) in zip(iobj_re(lwl), 10 ** iobj_log_im(lwl))
-                    ]
+                    [complex(a, b) for (a, b) in zip(iobj_re(lwl), 10 ** iobj_log_im(lwl), strict=False)],
                 )
                 ** 2
             )

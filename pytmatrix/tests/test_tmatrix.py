@@ -1,34 +1,31 @@
-"""
-Copyright (C) 2009-2023 Jussi Leinonen
+# Copyright (C) 2009-2015 Jussi Leinonen, Finnish Meteorological Institute,
+# California Institute of Technology
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
+# Permission is hereby granted, free of charge, to any person obtaining a copy of
+# this software and associated documentation files (the "Software"), to deal in
+# the Software without restriction, including without limitation the rights to
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+# the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-"""
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+# FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+"""Regression and validation tests for pytmatrix."""
 
 import numpy as np
 import pytest
-from pytmatrix.tmatrix import TMatrix, Scatterer
-from pytmatrix import orientation
-from pytmatrix import radar
-from pytmatrix import refractive
-from pytmatrix import tmatrix_aux
-from pytmatrix import psd
-from pytmatrix import scatter
 
+from pytmatrix import orientation, psd, radar, refractive, scatter, tmatrix_aux
+from pytmatrix.tmatrix import Scatterer, TMatrix
 
 # some allowance for rounding errors etc
 epsilon = 1e-7
@@ -40,7 +37,7 @@ def _assert_relative(x, x_ref, limit=epsilon):
     try:
         shape = x.shape
         if not shape:
-            raise AttributeError()
+            raise AttributeError
         for i in range(shape[0]):
             for j in range(shape[1]):
                 assert abs_diff[i, j] < 1e-15 or rel_diff[i, j] < epsilon
@@ -54,25 +51,12 @@ def _assert_less(value, limit):
 
 # For testing variable aspect ratio
 def drop_ar(D_eq):
+    """Custom aspect ratio function for testing."""
     if D_eq < 0.7:
         return 1.0
-    elif D_eq < 1.5:
-        return (
-            1.173
-            - 0.5165 * D_eq
-            + 0.4698 * D_eq**2
-            - 0.1317 * D_eq**3
-            - 8.5e-3 * D_eq**4
-        )
-    else:
-        return (
-            1.065
-            - 6.25e-2 * D_eq
-            - 3.99e-3 * D_eq**2
-            + 7.66e-4 * D_eq**3
-            - 4.095e-5 * D_eq**4
-        )
-
+    if D_eq < 1.5:
+        return 1.173 - 0.5165 * D_eq + 0.4698 * D_eq**2 - 0.1317 * D_eq**3 - 8.5e-3 * D_eq**4
+    return 1.065 - 6.25e-2 * D_eq - 3.99e-3 * D_eq**2 + 7.66e-4 * D_eq**3 - 4.095e-5 * D_eq**4
 
 
 @pytest.mark.skip(reason="Manual backend comparison helper; no assertions.")
@@ -108,11 +92,15 @@ def test_backend():
 
 
 def test_single():
-    """Test a single-orientation case"""
+    """Test a single-orientation case."""
     tm = TMatrix(
-        axi=2.0, lam=6.5, m=complex(1.5, 0.5), eps=1.0 / 0.6, suppress_warning=True
+        axi=2.0,
+        lam=6.5,
+        m=complex(1.5, 0.5),
+        eps=1.0 / 0.6,
+        suppress_warning=True,
     )
-    (S, Z) = tm.get_SZ()
+    S, Z = tm.get_SZ()
 
     S_ref = np.array(
         [
@@ -124,7 +112,7 @@ def test_single():
                 complex(1.11461702e-24, 3.75030914e-24),
                 complex(-8.38637654e-02, 3.10409912e-01),
             ],
-        ]
+        ],
     )
 
     Z_ref = np.array(
@@ -133,7 +121,7 @@ def test_single():
             [-2.12975199e-02, 8.20899248e-02, 2.00801268e-25, -1.07794906e-24],
             [1.94055633e-24, -2.01190190e-25, -7.88399525e-02, 8.33266362e-03],
             [2.43215306e-25, -1.07799010e-24, -8.33266362e-03, -7.88399525e-02],
-        ]
+        ],
     )
 
     _assert_relative(S, S_ref)
@@ -141,13 +129,17 @@ def test_single():
 
 
 def test_adaptive_orient():
-    """Test an adaptive orientation averaging case"""
+    """Test an adaptive orientation averaging case."""
     tm = TMatrix(
-        axi=2.0, lam=6.5, m=complex(1.5, 0.5), eps=1.0 / 0.6, suppress_warning=True
+        axi=2.0,
+        lam=6.5,
+        m=complex(1.5, 0.5),
+        eps=1.0 / 0.6,
+        suppress_warning=True,
     )
     tm.or_pdf = orientation.gaussian_pdf(20.0)
     tm.orient = orientation.orient_averaged_adaptive
-    (S, Z) = tm.get_SZ()
+    S, Z = tm.get_SZ()
 
     S_ref = np.array(
         [
@@ -159,7 +151,7 @@ def test_adaptive_orient():
                 complex(-1.50048180e-14, -1.64195485e-15),
                 complex(-9.54176591e-02, 2.84758322e-01),
             ],
-        ]
+        ],
     )
 
     Z_ref = np.array(
@@ -168,7 +160,7 @@ def test_adaptive_orient():
             [-1.37631854e-02, 7.82165256e-02, 5.61975938e-15, -1.32888054e-15],
             [8.68047418e-15, 3.52110917e-15, -7.73358177e-02, 5.14571155e-03],
             [1.31977116e-19, -3.38136420e-15, -5.14571155e-03, -7.65845784e-02],
-        ]
+        ],
     )
 
     _assert_relative(S, S_ref)
@@ -176,13 +168,17 @@ def test_adaptive_orient():
 
 
 def test_fixed_orient():
-    """Test a fixed-point orientation averaging case"""
+    """Test a fixed-point orientation averaging case."""
     tm = TMatrix(
-        axi=2.0, lam=6.5, m=complex(1.5, 0.5), eps=1.0 / 0.6, suppress_warning=True
+        axi=2.0,
+        lam=6.5,
+        m=complex(1.5, 0.5),
+        eps=1.0 / 0.6,
+        suppress_warning=True,
     )
     tm.or_pdf = orientation.gaussian_pdf(20.0)
     tm.orient = orientation.orient_averaged_fixed
-    (S, Z) = tm.get_SZ()
+    S, Z = tm.get_SZ()
 
     S_ref = np.array(
         [
@@ -194,7 +190,7 @@ def test_fixed_orient():
                 complex(6.21754594e-12, 2.95662844e-11),
                 complex(-9.54177082e-02, 2.84758158e-01),
             ],
-        ]
+        ],
     )
 
     Z_ref = np.array(
@@ -203,7 +199,7 @@ def test_fixed_orient():
             [-1.37649947e-02, 7.82237468e-02, -2.85105399e-11, -3.43475094e-12],
             [2.42108565e-11, -3.92054806e-11, -7.73426425e-02, 5.14654926e-03],
             [4.56792369e-12, -3.77838854e-12, -5.14654926e-03, -7.65915776e-02],
-        ]
+        ],
     )
 
     _assert_relative(S, S_ref)
@@ -211,14 +207,14 @@ def test_fixed_orient():
 
 
 def test_psd():
-    """Test a case that integrates over a particle size distribution"""
+    """Test a case that integrates over a particle size distribution."""
     tm = Scatterer(wavelength=6.5, m=complex(1.5, 0.5), axis_ratio=1.0 / 0.6)
     tm.psd_integrator = psd.PSDIntegrator()
     tm.psd_integrator.num_points = 500
     tm.psd = psd.GammaPSD(D0=1.0, Nw=1e3, mu=4)
     tm.psd_integrator.D_max = 10.0
     tm.psd_integrator.init_scatter_table(tm)
-    (S, Z) = tm.get_SZ()
+    S, Z = tm.get_SZ()
 
     S_ref = np.array(
         [
@@ -230,7 +226,7 @@ def test_psd():
                 complex(-6.71933678e-24, -6.83813546e-24),
                 complex(-1.10464413e00, -1.05571494e00),
             ],
-        ]
+        ],
     )
 
     Z_ref = np.array(
@@ -239,7 +235,7 @@ def test_psd():
             [-1.54020475e-02, 7.20540295e-02, 1.23279391e-25, 1.40049088e-25],
             [9.96224596e-25, -1.23291269e-25, -6.89739108e-02, 1.38873290e-02],
             [8.34137617e-26, 1.40048866e-25, -1.38873290e-02, -6.89739108e-02],
-        ]
+        ],
     )
 
     _assert_relative(S, S_ref)
@@ -247,7 +243,7 @@ def test_psd():
 
 
 def test_radar():
-    """Test that the radar properties are computed correctly"""
+    """Test that the radar properties are computed correctly."""
     tm = Scatterer(
         wavelength=tmatrix_aux.wl_C,
         m=refractive.m_w_10C[tmatrix_aux.wl_C],
@@ -304,12 +300,13 @@ def test_radar():
             A_h_ref,
             A_v_ref,
         ),
+        strict=False,
     ):
         _assert_relative(val, ref)
 
 
 def test_rayleigh():
-    """Test match with Rayleigh scattering for small spheres"""
+    """Test match with Rayleigh scattering for small spheres."""
     wl = 100.0
     r = 1.0
     eps = 1.0
@@ -327,9 +324,12 @@ def test_rayleigh():
 
 
 def test_optical_theorem():
-    """Optical theorem: test that for a lossless particle, Csca=Cext"""
+    """Optical theorem: test that for a lossless particle, Csca=Cext."""
     tm = Scatterer(
-        radius=4.0, wavelength=6.5, m=complex(1.5, 0.0), axis_ratio=1.0 / 0.6
+        radius=4.0,
+        wavelength=6.5,
+        m=complex(1.5, 0.0),
+        axis_ratio=1.0 / 0.6,
     )
     tm.set_geometry(tmatrix_aux.geom_horiz_forw)
     ssa_h = scatter.ssa(tm, True)
@@ -340,7 +340,7 @@ def test_optical_theorem():
 
 
 def test_asymmetry():
-    """Test calculation of the asymmetry parameter"""
+    """Test calculation of the asymmetry parameter."""
     tm = Scatterer(radius=4.0, wavelength=6.5, m=complex(1.5, 0.5), axis_ratio=1.0)
     tm.set_geometry(tmatrix_aux.geom_horiz_forw)
     asym_horiz = scatter.asym(tm)
@@ -357,7 +357,7 @@ def test_asymmetry():
 
 
 def test_against_mie():
-    """Test scattering parameters against Mie results"""
+    """Test scattering parameters against Mie results."""
     # Reference values computed with the Mie code of Maetzler
     sca_xsect_ref = 4.4471684294079958
     ext_xsect_ref = 7.8419745883848435
@@ -375,7 +375,6 @@ def test_against_mie():
 
 def test_integrated_x_sca():
     """Test Rayleigh scattering cross section integrated over sizes."""
-
     m = complex(3.0, 0.5)
     K = (m**2 - 1) / (m**2 + 2)
     N0 = 10
@@ -399,7 +398,6 @@ def test_integrated_x_sca():
 
 def test_attn_polarization():
     """Test attenuation calculation for multiple polarization with PSD."""
-
     wavelength = tmatrix_aux.wl_C
     m = refractive.m_w_20C[wavelength]
     # K = (m**2 - 1) / (m**2 + 2)

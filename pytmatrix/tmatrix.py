@@ -1,29 +1,38 @@
-"""
-Copyright (C) 2009-2015 Jussi Leinonen, Finnish Meteorological Institute,
-California Institute of Technology
+# Copyright (C) 2009-2015 Jussi Leinonen, Finnish Meteorological Institute,
+# California Institute of Technology
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
+# Permission is hereby granted, free of charge, to any person obtaining a copy of
+# this software and associated documentation files (the "Software"), to deal in
+# the Software without restriction, including without limitation the rights to
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+# the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-"""
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+# FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+"""Core scatterer interface backed by the Fortran T-matrix solver."""
+
+# import sys
 import warnings
+
+from pytmatrix import orientation
+
+# if hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled():
+#     raise RuntimeError(
+#         "pytmatrix requires the CPython GIL to be enabled. "
+#         "Restart Python with GIL enabled (for example, unset PYTHON_GIL "
+#         "or use `-X gil=1`).",
+#     )
 from pytmatrix.fortran_tm import pytmatrix
 from pytmatrix.quadrature import get_points_and_weights
-import pytmatrix.orientation as orientation
 
 
 class Scatterer:
@@ -45,7 +54,8 @@ class Scatterer:
     called. The Scatterer object will automatically recompute the T-matrix
     and/or the amplitude and phase matrices when needed.
 
-    Attributes:
+    Attributes
+    ----------
         radius: Equivalent radius.
         radius_type: If radius_type==Scatterer.RADIUS_EQUAL_VOLUME (default),
             radius is the equivalent volume radius.
@@ -127,6 +137,13 @@ class Scatterer:
     SHAPE_CHEBYSHEV = 1
 
     def __init__(self, **kwargs):
+        """Initialize a scatterer instance.
+
+        Parameters
+        ----------
+        **kwargs
+            Optional overrides for scatterer attributes and deprecated aliases.
+        """
         self.radius = 1.0
         self.radius_type = Scatterer.RADIUS_EQUAL_VOLUME
         self.wavelength = 1.0
@@ -155,9 +172,7 @@ class Scatterer:
         self.psd_integrator = None
         self.psd = None
 
-        self.suppress_warning = (
-            kwargs["suppress_warning"] if "suppress_warning" in kwargs else False
-        )
+        self.suppress_warning = kwargs.get("suppress_warning", False)
 
         for attr in self.__class__._deprecated_aliases:
             if attr in kwargs:
@@ -170,24 +185,31 @@ class Scatterer:
     def set_geometry(self, geom):
         """A convenience function to set the geometry variables.
 
-        Args:
-            geom: A tuple containing (thet0, thet, phi0, phi, alpha, beta).
-            See the Scatterer class documentation for a description of these
-            angles.
+        Parameters
+        ----------
+        geom : tuple
+            Tuple ``(thet0, thet, phi0, phi, alpha, beta)``.
         """
-        (self.thet0, self.thet, self.phi0, self.phi, self.alpha, self.beta) = geom
+        self.thet0, self.thet, self.phi0, self.phi, self.alpha, self.beta = geom
 
     def get_geometry(self):
         """A convenience function to get the geometry variables.
 
-        Returns:
-            A tuple containing (thet0, thet, phi0, phi, alpha, beta).
-            See the Scatterer class documentation for a description of these
-            angles.
+        Returns
+        -------
+        tuple
+            Tuple ``(thet0, thet, phi0, phi, alpha, beta)``.
         """
         return (self.thet0, self.thet, self.phi0, self.phi, self.alpha, self.beta)
 
     def _warn_deprecation(self, attr):
+        """Emit a deprecation warning for an aliased attribute.
+
+        Parameters
+        ----------
+        attr : str
+            Deprecated attribute name used by the caller.
+        """
         if not self.suppress_warning:
             replacement = self._deprecated_aliases[attr]
             warnings.simplefilter("always")
@@ -198,10 +220,23 @@ class Scatterer:
                     + "'{replacement}'."
                 ).format(attr=attr, replacement=replacement),
                 DeprecationWarning,
+                stacklevel=2,
             )
             warnings.filters.pop(0)
 
     def __getattr__(self, name):
+        """Resolve deprecated attribute aliases on lookup.
+
+        Parameters
+        ----------
+        name : str
+            Attribute requested by the caller.
+
+        Returns
+        -------
+        object
+            Attribute value from the canonical attribute name.
+        """
         if name == "_aliases":
             raise AttributeError
         if name in self._deprecated_aliases:
@@ -210,6 +245,15 @@ class Scatterer:
         return object.__getattribute__(self, name)
 
     def __setattr__(self, name, value):
+        """Resolve deprecated attribute aliases on assignment.
+
+        Parameters
+        ----------
+        name : str
+            Attribute name to set.
+        value : object
+            Value assigned to the attribute.
+        """
         if name in self._deprecated_aliases:
             self._warn_deprecation(name)
         name = self._deprecated_aliases.get(name, name)
@@ -217,7 +261,6 @@ class Scatterer:
 
     def _init_tmatrix(self):
         """Initialize the T-matrix."""
-
         if self.radius_type == Scatterer.RADIUS_MAXIMUM:
             # Maximum radius is not directly supported in the original
             # so we convert it to equal volume radius
@@ -252,8 +295,11 @@ class Scatterer:
     def _init_orient(self):
         """Retrieve the quadrature points and weights if needed."""
         if self.orient == orientation.orient_averaged_fixed:
-            (self.beta_p, self.beta_w) = get_points_and_weights(
-                self.or_pdf, 0, 180, self.n_beta
+            self.beta_p, self.beta_w = get_points_and_weights(
+                self.or_pdf,
+                0,
+                180,
+                self.n_beta,
             )
         self._set_orient_signature()
 
@@ -270,12 +316,26 @@ class Scatterer:
         )
 
     def _set_orient_signature(self):
+        """Mark orientation parameters as up to date."""
         self._orient_signature = (self.orient, self.or_pdf, self.n_alpha, self.n_beta)
 
     def _set_psd_signature(self):
+        """Mark PSD parameters as up to date."""
         self._psd_signature = (self.psd,)
 
     def equal_volume_from_maximum(self):
+        """Convert maximum radius to equal-volume radius.
+
+        Returns
+        -------
+        float
+            Equal-volume radius equivalent to the current maximum radius.
+
+        Raises
+        ------
+        AttributeError
+            If the current particle shape is unsupported.
+        """
         if self.shape == Scatterer.SHAPE_SPHEROID:
             if self.axis_ratio > 1.0:  # oblate
                 r_eq = self.radius / self.axis_ratio ** (1.0 / 3.0)
@@ -323,7 +383,7 @@ class Scatterer:
         outdated = tm_outdated or scatter_outdated
 
         if outdated:
-            (self._S_single, self._Z_single) = pytmatrix.calcampl(
+            self._S_single, self._Z_single = pytmatrix.calcampl(
                 self.nmax,
                 self.wavelength,
                 self.thet0,
@@ -339,7 +399,6 @@ class Scatterer:
 
     def get_SZ_orient(self):
         """Get the S and Z matrices using the specified orientation averaging."""
-
         tm_outdated = self._tm_signature != (
             self.radius,
             self.radius_type,
@@ -372,7 +431,7 @@ class Scatterer:
         outdated = tm_outdated or scatter_outdated or orient_outdated
 
         if outdated:
-            (self._S_orient, self._Z_orient) = self.orient(self)
+            self._S_orient, self._Z_orient = self.orient(self)
             self._set_scatter_signature()
 
         return (self._S_orient, self._Z_orient)
@@ -380,7 +439,7 @@ class Scatterer:
     def get_SZ(self):
         """Get the S and Z matrices using the current parameters."""
         if self.psd_integrator is None:
-            (self._S, self._Z) = self.get_SZ_orient()
+            self._S, self._Z = self.get_SZ_orient()
         else:
             scatter_outdated = self._scatter_signature != (
                 self.thet0,
@@ -395,28 +454,52 @@ class Scatterer:
             outdated = scatter_outdated or psd_outdated
 
             if outdated:
-                (self._S, self._Z) = self.psd_integrator(self.psd, self.get_geometry())
+                self._S, self._Z = self.psd_integrator(self.psd, self.get_geometry())
                 self._set_scatter_signature()
                 self._set_psd_signature()
 
         return (self._S, self._Z)
 
     def get_S(self):
+        """Get the amplitude matrix for the current configuration.
+
+        Returns
+        -------
+        numpy.ndarray
+            Complex amplitude matrix ``S``.
+        """
         return self.get_SZ()[0]
 
     def get_Z(self):
+        """Get the phase matrix for the current configuration.
+
+        Returns
+        -------
+        numpy.ndarray
+            Real phase matrix ``Z``.
+        """
         return self.get_SZ()[1]
 
 
 # Alias with a warning
 class TMatrix(Scatterer):
+    """Deprecated alias of :class:`Scatterer`."""
+
     def __init__(self, **kwargs):
+        """Initialize deprecated ``TMatrix`` alias.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments forwarded to :class:`Scatterer`.
+        """
         if not kwargs.get("suppress_warning", False):
             warnings.simplefilter("always")
             warnings.warn(
                 "'TMatrix' is deprecated and may be removed in "
                 + "a future version. It has been renamed to 'Scatterer'.",
                 DeprecationWarning,
+                stacklevel=2,
             )
             warnings.filters.pop(0)
         super().__init__(**kwargs)

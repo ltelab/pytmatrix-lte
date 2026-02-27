@@ -1,7 +1,13 @@
 """PyTMatrix package."""
 
+import contextlib
+from collections.abc import Sequence
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Sequence
+
+# Get version
+with contextlib.suppress(PackageNotFoundError):
+    __version__ = version("pytmatrix")
 
 
 def run_tests(pytest_args: Sequence[str] | None = None) -> int:
@@ -21,7 +27,7 @@ def run_tests(pytest_args: Sequence[str] | None = None) -> int:
         import pytest
     except ImportError as exc:
         raise RuntimeError(
-            "pytest is required to run tests. Install it with `pip install pytest`."
+            "pytest is required to run tests. Install it with `pip install pytest`.",
         ) from exc
 
     tests_dir = Path(__file__).resolve().parent / "tests"

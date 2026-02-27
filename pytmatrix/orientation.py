@@ -1,50 +1,48 @@
-"""
-Copyright (C) 2009-2023 Jussi Leinonen, Finnish Meteorological Institute,
-California Institute of Technology
+# Copyright (C) 2009-2015 Jussi Leinonen, Finnish Meteorological Institute,
+# California Institute of Technology
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
+# Permission is hereby granted, free of charge, to any person obtaining a copy of
+# this software and associated documentation files (the "Software"), to deal in
+# the Software without restriction, including without limitation the rights to
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+# the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-"""
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+# FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""Orientation averaging utilities for scattering computations."""
 
 import numpy as np
-from scipy.integrate import quad, dblquad
+from scipy.integrate import dblquad, quad
 
 
 def gaussian_pdf(std=10.0, mean=0.0):
     """Gaussian PDF for orientation averaging.
 
-    Args:
-        std: The standard deviation in degrees of the Gaussian PDF
-        mean: The mean in degrees of the Gaussian PDF.  This should be a number
-          in the interval [0, 180)
+    Parameters
+    ----------
+    std : float, default=10.0
+        Standard deviation in degrees.
+    mean : float, default=0.0
+        Mean in degrees. Should be within the interval ``[0, 180)``.
 
-    Returns:
-        pdf(x), a function that returns the value of the spherical Jacobian-
-        normalized Gaussian PDF with the given STD at x (degrees). It is
-        normalized for the interval [0, 180].
+    Returns
+    -------
+    callable
+        Function ``pdf(x)`` evaluating the spherical-Jacobian-normalized
+        Gaussian PDF, normalized on ``[0, 180]`` degrees.
     """
     norm_const = 1.0
 
     def pdf(x):
-        return (
-            norm_const
-            * np.exp(-0.5 * ((x - mean) / std) ** 2)
-            * np.sin(np.pi / 180.0 * x)
-        )
+        return norm_const * np.exp(-0.5 * ((x - mean) / std) ** 2) * np.sin(np.pi / 180.0 * x)
 
     norm_dev = quad(pdf, 0.0, 180.0)[0]
     # ensure that the integral over the distribution equals 1
@@ -55,9 +53,11 @@ def gaussian_pdf(std=10.0, mean=0.0):
 def uniform_pdf():
     """Uniform PDF for orientation averaging.
 
-    Returns:
-        pdf(x), a function that returns the value of the spherical Jacobian-
-        normalized uniform PDF. It is normalized for the interval [0, 180].
+    Returns
+    -------
+    callable
+        Function ``pdf(x)`` evaluating the spherical-Jacobian-normalized
+        uniform PDF, normalized on ``[0, 180]`` degrees.
     """
     norm_const = 1.0
 
@@ -73,11 +73,15 @@ def uniform_pdf():
 def orient_single(tm):
     """Compute the T-matrix using a single orientation scatterer.
 
-    Args:
-        tm: Scatterer (or descendant) instance
+    Parameters
+    ----------
+    tm : pytmatrix.tmatrix.Scatterer
+        Scatterer (or descendant) instance.
 
-    Returns:
-        The amplitude (S) and phase (Z) matrices.
+    Returns
+    -------
+    tuple
+        Amplitude and phase matrices ``(S, Z)``.
     """
     return tm.get_SZ_single()
 
@@ -89,17 +93,21 @@ def orient_averaged_adaptive(tm):
     for reference purposes. Uses the set particle orientation PDF, ignoring
     the alpha and beta attributes.
 
-    Args:
-        tm: Scatterer (or descendant) instance
+    Parameters
+    ----------
+    tm : pytmatrix.tmatrix.Scatterer
+        Scatterer (or descendant) instance.
 
-    Returns:
-        The amplitude (S) and phase (Z) matrices.
+    Returns
+    -------
+    tuple
+        Amplitude and phase matrices ``(S, Z)``.
     """
     S = np.zeros((2, 2), dtype=complex)
     Z = np.zeros((4, 4))
 
     def Sfunc(beta, alpha, i, j, real):
-        (S_ang, Z_ang) = tm.get_SZ_single(alpha=alpha, beta=beta)
+        S_ang, Z_ang = tm.get_SZ_single(alpha=alpha, beta=beta)
         s = S_ang[i, j].real if real else S_ang[i, j].imag
         return s * tm.or_pdf(beta)
 
@@ -108,28 +116,35 @@ def orient_averaged_adaptive(tm):
         for j in ind:
             S.real[i, j] = (
                 dblquad(
-                    Sfunc, 0.0, 360.0, lambda x: 0.0, lambda x: 180.0, (i, j, True)
+                    Sfunc,
+                    0.0,
+                    360.0,
+                    lambda x: 0.0,
+                    lambda x: 180.0,
+                    (i, j, True),
                 )[0]
                 / 360.0
             )
             S.imag[i, j] = (
                 dblquad(
-                    Sfunc, 0.0, 360.0, lambda x: 0.0, lambda x: 180.0, (i, j, False)
+                    Sfunc,
+                    0.0,
+                    360.0,
+                    lambda x: 0.0,
+                    lambda x: 180.0,
+                    (i, j, False),
                 )[0]
                 / 360.0
             )
 
     def Zfunc(beta, alpha, i, j):
-        (S_and, Z_ang) = tm.get_SZ_single(alpha=alpha, beta=beta)
+        S_and, Z_ang = tm.get_SZ_single(alpha=alpha, beta=beta)
         return Z_ang[i, j] * tm.or_pdf(beta)
 
     ind = range(4)
     for i in ind:
         for j in ind:
-            Z[i, j] = (
-                dblquad(Zfunc, 0.0, 360.0, lambda x: 0.0, lambda x: 180.0, (i, j))[0]
-                / 360.0
-            )
+            Z[i, j] = dblquad(Zfunc, 0.0, 360.0, lambda x: 0.0, lambda x: 180.0, (i, j))[0] / 360.0
 
     return (S, Z)
 
@@ -141,11 +156,15 @@ def orient_averaged_fixed(tm):
     for most use. Uses the set particle orientation PDF, ignoring
     the alpha and beta attributes.
 
-    Args:
-        tm: Scatterer (or descendant) instance.
+    Parameters
+    ----------
+    tm : pytmatrix.tmatrix.Scatterer
+        Scatterer (or descendant) instance.
 
-    Returns:
-        The amplitude (S) and phase (Z) matrices.
+    Returns
+    -------
+    tuple
+        Amplitude and phase matrices ``(S, Z)``.
     """
     S = np.zeros((2, 2), dtype=complex)
     Z = np.zeros((4, 4))
@@ -153,8 +172,8 @@ def orient_averaged_fixed(tm):
     aw = 1.0 / tm.n_alpha
 
     for alpha in ap:
-        for beta, w in zip(tm.beta_p, tm.beta_w):
-            (S_ang, Z_ang) = tm.get_SZ_single(alpha=alpha, beta=beta)
+        for beta, w in zip(tm.beta_p, tm.beta_w, strict=False):
+            S_ang, Z_ang = tm.get_SZ_single(alpha=alpha, beta=beta)
             S += w * S_ang
             Z += w * Z_ang
 
