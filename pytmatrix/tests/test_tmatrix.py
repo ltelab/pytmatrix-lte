@@ -212,6 +212,7 @@ def test_psd():
     tm.psd_integrator = psd.PSDIntegrator()
     tm.psd_integrator.num_points = 500
     tm.psd = psd.GammaPSD(D0=1.0, Nw=1e3, mu=4)
+    tm.psd_integrator.D_min = 0
     tm.psd_integrator.D_max = 10.0
     tm.psd_integrator.init_scatter_table(tm)
     S, Z = tm.get_SZ()
@@ -219,22 +220,22 @@ def test_psd():
     S_ref = np.array(
         [
             [
-                complex(1.02521928e00, 6.76066598e-01),
-                complex(6.71933838e-24, 6.83819665e-24),
+                complex(1.02521877e00, 6.76066297e-01),
+                complex(6.71956653e-24, 6.83841456e-24),
             ],
             [
-                complex(-6.71933678e-24, -6.83813546e-24),
-                complex(-1.10464413e00, -1.05571494e00),
+                complex(-6.71956493e-24, -6.83835392e-24),
+                complex(-1.10464386e00, -1.05571449e00),
             ],
         ],
     )
 
     Z_ref = np.array(
         [
-            [7.20540295e-02, -1.54020475e-02, -9.96222107e-25, 8.34246458e-26],
-            [-1.54020475e-02, 7.20540295e-02, 1.23279391e-25, 1.40049088e-25],
-            [9.96224596e-25, -1.23291269e-25, -6.89739108e-02, 1.38873290e-02],
-            [8.34137617e-26, 1.40048866e-25, -1.38873290e-02, -6.89739108e-02],
+            [7.20539808e-02, -1.54020527e-02, -9.96254873e-25, 8.34271675e-26],
+            [-1.54020527e-02, 7.20539808e-02, 1.23283123e-25, 1.40052053e-25],
+            [9.96257328e-25, -1.23294827e-25, -6.89738689e-02, 1.38873041e-02],
+            [8.34164221e-26, 1.40051841e-25, -1.38873041e-02, -6.89738689e-02],
         ],
     )
 
@@ -253,6 +254,7 @@ def test_radar():
     tm.psd_integrator.num_points = 500
     tm.psd = psd.GammaPSD(D0=2.0, Nw=1e3, mu=4)
     tm.psd_integrator.axis_ratio_func = lambda D: 1.0 / drop_ar(D)
+    tm.psd_integrator.D_min = 0.0
     tm.psd_integrator.D_max = 10.0
     tm.or_pdf = orientation.gaussian_pdf(20.0)
     tm.orient = orientation.orient_averaged_fixed
@@ -275,16 +277,16 @@ def test_radar():
     A_h = radar.Ai(tm)
     A_v = radar.Ai(tm, False)
 
-    radar_xsect_h_ref = 0.22176446239750278
-    Z_h_ref = 6383.7337897299258
-    Z_v_ref = 5066.721040036321
-    ldr_ref = 0.0021960626647629547
-    Zdr_ref = 1.2599339374097778
-    delta_hv_ref = -0.00021227778705544846
-    rho_hv_ref = 0.99603080460983828
-    Kdp_ref = 0.19334678024367824
-    A_h_ref = 0.018923976733777458
-    A_v_ref = 0.016366340549483317
+    radar_xsect_h_ref = 0.2217351622827723
+    Z_h_ref = 6382.8903537238775
+    Z_v_ref = 5066.447481471341
+    ldr_ref = 0.0021932899841752888
+    Zdr_ref = 1.2598354916471433
+    delta_hv_ref = -0.00022795978381164473
+    rho_hv_ref = 0.9960401462838847
+    Kdp_ref = 0.19330214945200055
+    A_h_ref = 0.018922910153411555
+    A_v_ref = 0.016365753920010016
 
     for val, ref in zip(
         (radar_xsect_h, Z_h, Z_v, ldr, Zdr, delta_hv, rho_hv, Kdp, A_h, A_v),
