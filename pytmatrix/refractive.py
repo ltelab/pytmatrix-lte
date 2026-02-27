@@ -93,7 +93,7 @@ def mg_refractive(m, mix):
     else:
         m_last = mg_refractive(m[-2:], mix[-2:])
         mix_last = mix[-2] + mix[-1]
-        m = mg_refractive(m[:-2] + (m_last,), mix[:-2] + (mix_last,))
+        m = mg_refractive((*m[:-2], m_last), (*mix[:-2], mix_last))
     return m
 
 

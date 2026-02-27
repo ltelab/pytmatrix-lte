@@ -21,6 +21,7 @@
 
 import sys
 from datetime import datetime
+from typing import ClassVar
 
 try:
     import cPickle as pickle
@@ -441,7 +442,15 @@ class PSDIntegrator:
         precompute.
     """
 
-    attrs = {"num_points", "m_func", "axis_ratio_func", "D_max", "geometries"}
+    _ATTRS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "num_points",
+            "m_func",
+            "axis_ratio_func",
+            "D_max",
+            "geometries",
+        },
+    )
 
     def __init__(self, **kwargs):
         """Initialize a PSD integrator.
@@ -449,7 +458,7 @@ class PSDIntegrator:
         Parameters
         ----------
         **kwargs
-            Optional overrides for class attributes in ``PSDIntegrator.attrs``.
+            Optional overrides for class attributes in ``PSDIntegrator._ATTRS``.
         """
         self.num_points = 1024
         self.m_func = None
@@ -458,7 +467,7 @@ class PSDIntegrator:
         self.geometries = (tmatrix_aux.geom_horiz_back,)
 
         for k in kwargs:
-            if k in self.__class__.attrs:
+            if k in self.__class__._ATTRS:
                 self.__dict__[k] = kwargs[k]
 
         self._S_table = None

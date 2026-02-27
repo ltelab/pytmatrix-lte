@@ -102,7 +102,7 @@ def sca_xsect(scatterer, h_pol=True):
         return I * np.sin(thet)
 
     try:
-        xsect = dblquad(d_xsect, 0.0, 2 * np.pi, lambda x: 0.0, lambda x: np.pi)[0]
+        xsect = dblquad(d_xsect, 0.0, 2 * np.pi, lambda x: 0.0, lambda x: np.pi)[0]  # noqa: ARG005
     finally:
         scatterer.set_geometry(old_geom)
 
@@ -207,7 +207,7 @@ def asym(scatterer, h_pol=True):
         return I * cos_T_sin_t
 
     try:
-        cos_int = dblquad(integrand, 0.0, 2 * np.pi, lambda x: 0.0, lambda x: np.pi)[0]
+        cos_int = dblquad(integrand, 0.0, 2 * np.pi, lambda x: 0.0, lambda x: np.pi)[0]  # noqa: ARG005
     finally:
         scatterer.set_geometry(old_geom)
 

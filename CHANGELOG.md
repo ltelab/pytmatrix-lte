@@ -10,11 +10,8 @@
 - Improve documentation and add docstrings to all public functions and classes.
 - Refactored tests to use pytest
 
-
 ### Changes
 
 - Remove deprecated TMatrixPSD class and related code.
+- Remove deprecated alias axi, lam, eps, rat, np and scatter from Scatterer class.
 - Speed up computations in various places with vectorized operations
-
-
- 

@@ -175,8 +175,6 @@ ignore = [
     "RUF059",
 
     # Docstyle Rules
-    "D100", # Missing docstring in public module
-    "D404", # Docstring can't start with "This"
     "D401", # First sentence must be in imperative mood
 
     # Complexity rules

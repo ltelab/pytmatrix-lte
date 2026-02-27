@@ -70,13 +70,13 @@ def test_backend():
     """
     scatterer = Scatterer(
         radius=10.0,
-        rat=0.1,
+        radius_type=0.1,
         wavelength=2 * np.pi,
         m=complex(1.5, 0.02),
         axis_ratio=0.5,
         ddelt=1e-3,
         ndgs=2,
-        np=-1,
+        shape=-1,
     )
     scatterer.thet0 = 56.0
     scatterer.thet = 65.0
@@ -94,10 +94,10 @@ def test_backend():
 def test_single():
     """Test a single-orientation case."""
     tm = TMatrix(
-        axi=2.0,
-        lam=6.5,
+        radius=2.0,
+        wavelength=6.5,
         m=complex(1.5, 0.5),
-        eps=1.0 / 0.6,
+        axis_ratio=1.0 / 0.6,
         suppress_warning=True,
     )
     S, Z = tm.get_SZ()
@@ -131,10 +131,10 @@ def test_single():
 def test_adaptive_orient():
     """Test an adaptive orientation averaging case."""
     tm = TMatrix(
-        axi=2.0,
-        lam=6.5,
+        radius=2.0,
+        wavelength=6.5,
         m=complex(1.5, 0.5),
-        eps=1.0 / 0.6,
+        axis_ratio=1.0 / 0.6,
         suppress_warning=True,
     )
     tm.or_pdf = orientation.gaussian_pdf(20.0)
@@ -170,10 +170,10 @@ def test_adaptive_orient():
 def test_fixed_orient():
     """Test a fixed-point orientation averaging case."""
     tm = TMatrix(
-        axi=2.0,
-        lam=6.5,
+        radius=2.0,
+        wavelength=6.5,
         m=complex(1.5, 0.5),
-        eps=1.0 / 0.6,
+        axis_ratio=1.0 / 0.6,
         suppress_warning=True,
     )
     tm.or_pdf = orientation.gaussian_pdf(20.0)
@@ -418,3 +418,20 @@ def test_attn_polarization():
     _assert_less(0, radar.Ai(sca, h_pol=False))
     # Check that we have differential attenuation
     _assert_less(radar.Ai(sca, h_pol=False), radar.Ai(sca, h_pol=True))
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"axi": 2.0},
+        {"lam": 6.5},
+        {"eps": 1.2},
+        {"rat": 1.0},
+        {"np": -1},
+        {"scatter": orientation.orient_single},
+    ],
+)
+def test_removed_deprecated_aliases(kwargs):
+    """Ensure removed constructor aliases are rejected."""
+    with pytest.raises(TypeError):
+        Scatterer(**kwargs)

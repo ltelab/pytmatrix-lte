@@ -22,6 +22,7 @@
 
 # import sys
 import warnings
+from typing import ClassVar
 
 from pytmatrix import orientation
 
@@ -63,7 +64,7 @@ class Scatterer:
             radius.
             If radius_type==Scatterer.RADIUS_EQUAL_AREA,
             radius is the equivalent area radius.
-        wavelength: The wavelength of incident light (same units as axi).
+        wavelength: The wavelength of incident light (same units as radius).
         m: The complex refractive index.
         axis_ratio: The horizontal-to-rotational axis ratio.
         shape: Particle shape.
@@ -93,40 +94,31 @@ class Scatterer:
             effect if psd_integrator is None.
     """
 
-    _attr_list = {
-        "radius",
-        "radius_type",
-        "wavelength",
-        "m",
-        "axis_ratio",
-        "shape",
-        "np",
-        "ddelt",
-        "ndgs",
-        "alpha",
-        "beta",
-        "thet0",
-        "thet",
-        "phi0",
-        "phi",
-        "Kw_sqr",
-        "orient",
-        "scatter",
-        "or_pdf",
-        "n_alpha",
-        "n_beta",
-        "psd_integrator",
-        "psd",
-    }
-
-    _deprecated_aliases = {
-        "axi": "radius",
-        "lam": "wavelength",
-        "eps": "axis_ratio",
-        "rat": "radius_type",
-        "np": "shape",
-        "scatter": "orient",
-    }
+    _ATTRS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "radius",
+            "radius_type",
+            "wavelength",
+            "m",
+            "axis_ratio",
+            "shape",
+            "ddelt",
+            "ndgs",
+            "alpha",
+            "beta",
+            "thet0",
+            "thet",
+            "phi0",
+            "phi",
+            "Kw_sqr",
+            "orient",
+            "or_pdf",
+            "n_alpha",
+            "n_beta",
+            "psd_integrator",
+            "psd",
+        },
+    )
 
     RADIUS_EQUAL_VOLUME = 1.0
     RADIUS_EQUAL_AREA = 0.0
@@ -142,7 +134,7 @@ class Scatterer:
         Parameters
         ----------
         **kwargs
-            Optional overrides for scatterer attributes and deprecated aliases.
+            Optional overrides for scatterer attributes.
         """
         self.radius = 1.0
         self.radius_type = Scatterer.RADIUS_EQUAL_VOLUME
@@ -174,11 +166,13 @@ class Scatterer:
 
         self.suppress_warning = kwargs.get("suppress_warning", False)
 
-        for attr in self.__class__._deprecated_aliases:
-            if attr in kwargs:
-                self._warn_deprecation(attr)
-                self.__dict__[self._deprecated_aliases[attr]] = kwargs[attr]
-        for attr in self._attr_list:
+        allowed_kwargs = self._ATTRS | {"suppress_warning"}
+        unknown = sorted(set(kwargs) - allowed_kwargs)
+        if unknown:
+            unknown_str = ", ".join(unknown)
+            raise TypeError(f"Unexpected keyword argument(s): {unknown_str}")
+
+        for attr in self._ATTRS:
             if attr in kwargs:
                 self.__dict__[attr] = kwargs[attr]
 
@@ -201,63 +195,6 @@ class Scatterer:
             Tuple ``(thet0, thet, phi0, phi, alpha, beta)``.
         """
         return (self.thet0, self.thet, self.phi0, self.phi, self.alpha, self.beta)
-
-    def _warn_deprecation(self, attr):
-        """Emit a deprecation warning for an aliased attribute.
-
-        Parameters
-        ----------
-        attr : str
-            Deprecated attribute name used by the caller.
-        """
-        if not self.suppress_warning:
-            replacement = self._deprecated_aliases[attr]
-            warnings.simplefilter("always")
-            warnings.warn(
-                (
-                    "The attribute '{attr}' is deprecated and may "
-                    + "be removed in a future version. It has been renamed to "
-                    + "'{replacement}'."
-                ).format(attr=attr, replacement=replacement),
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            warnings.filters.pop(0)
-
-    def __getattr__(self, name):
-        """Resolve deprecated attribute aliases on lookup.
-
-        Parameters
-        ----------
-        name : str
-            Attribute requested by the caller.
-
-        Returns
-        -------
-        object
-            Attribute value from the canonical attribute name.
-        """
-        if name == "_aliases":
-            raise AttributeError
-        if name in self._deprecated_aliases:
-            self._warn_deprecation(name)
-        name = self._deprecated_aliases.get(name, name)
-        return object.__getattribute__(self, name)
-
-    def __setattr__(self, name, value):
-        """Resolve deprecated attribute aliases on assignment.
-
-        Parameters
-        ----------
-        name : str
-            Attribute name to set.
-        value : object
-            Value assigned to the attribute.
-        """
-        if name in self._deprecated_aliases:
-            self._warn_deprecation(name)
-        name = self._deprecated_aliases.get(name, name)
-        object.__setattr__(self, name, value)
 
     def _init_tmatrix(self):
         """Initialize the T-matrix."""
