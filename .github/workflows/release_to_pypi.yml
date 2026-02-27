@@ -29,16 +29,18 @@ jobs:
       - name: Build wheels
         env:
           CIBW_BUILD: "cp311-* cp312-* cp313-* cp314-*"
-          CIBW_SKIP: "pp* *-musllinux_* *_i686 *-win32"
+          CIBW_SKIP: "cp3??t-* pp* *-musllinux_* *_i686 *-win32"
           CIBW_ARCHS_LINUX: "x86_64"
-          CIBW_ARCHS_MACOS: "x86_64 arm64"
+          # macos-13 runner is Intel; avoid unstable Fortran cross-arch builds.
+          CIBW_ARCHS_MACOS: "x86_64"
           CIBW_ARCHS_WINDOWS: "AMD64"
           CIBW_BEFORE_ALL_LINUX: "bash -c 'if command -v dnf >/dev/null 2>&1; then dnf install -y gcc-gfortran; else yum install -y gcc-gfortran; fi'"
           CIBW_BEFORE_ALL_MACOS: "brew install gcc"
           CIBW_BEFORE_ALL_WINDOWS: "choco install mingw -y"
           CIBW_ENVIRONMENT_LINUX: "FC=gfortran"
           CIBW_ENVIRONMENT_MACOS: "FC=gfortran"
-          CIBW_ENVIRONMENT_WINDOWS: "FC=gfortran"
+          # Pin C/C++/Fortran to MinGW toolchain to avoid MSVC/MinGW mixing.
+          CIBW_ENVIRONMENT_WINDOWS: "CC=gcc CXX=g++ FC=gfortran"
           CIBW_BEFORE_BUILD_MACOS: "python -m pip install delocate"
           CIBW_BEFORE_BUILD_WINDOWS: "python -m pip install delvewheel"
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"

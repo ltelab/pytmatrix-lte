@@ -27,7 +27,6 @@ If yes, please describe the impact and communicate accordingly:
 **The PR fulfills these requirements:**
 
 - [ ] It's submitted to the branch named as follow :
-  - Add a reader: `reader-<institute>-<campaign>`
   - Fix a bug: `bugfix-<some_key>-<word>`
   - Improve the doc: `doc-<some_key>-<word>`
   - Add a new feature: `feature-<some_key>-<word>`
