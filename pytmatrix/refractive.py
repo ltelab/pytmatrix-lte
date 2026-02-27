@@ -161,7 +161,7 @@ def ice_refractive(file):
         else:
             mi_sqr = (
                 np.array(
-                    [complex(a, b) for (a, b) in zip(iobj_re(lwl), 10 ** iobj_log_im(lwl), strict=False)],
+                    [complex(a, b) for (a, b) in zip(iobj_re(lwl), 10 ** iobj_log_im(lwl), strict=True)],
                 )
                 ** 2
             )

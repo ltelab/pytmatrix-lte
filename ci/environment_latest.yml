@@ -10,5 +10,4 @@ dependencies:
   - pytest
   - setuptools
   - pre_commit
-  - pytest
   - pip

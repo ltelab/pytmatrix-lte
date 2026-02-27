@@ -175,7 +175,7 @@ def orient_averaged_fixed(tm):
     aw = 1.0 / tm.n_alpha
 
     for alpha in ap:
-        for beta, w in zip(tm.beta_p, tm.beta_w, strict=False):
+        for beta, w in zip(tm.beta_p, tm.beta_w, strict=True):
             S_ang, Z_ang = tm.get_SZ_single(alpha=alpha, beta=beta)
             S += w * S_ang
             Z += w * Z_ang

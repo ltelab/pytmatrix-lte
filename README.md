@@ -26,7 +26,7 @@ The instructions below describe how to install the **LTE-maintained fork of pyTM
 Make sure you have the GNU Fortran Compiler (`gfortran`) and the Meson build system installed. You can install them via conda:
 
 ```bash
-conda install -c conda-forge gfortran meson meson-python
+conda install -c conda-forge gfortran meson meson-python ninja
 ```
 
 ### 2. Install pytmatrix-lte
@@ -57,7 +57,7 @@ The software should now be installed and ready to use.
 If you want to install the package for development, you can clone the repository and install it in editable mode:
 
 ```bash
-micromamba install gfortran meson meson-python numpy scipy pytest
+micromamba install gfortran meson meson-python ninja numpy scipy pytest
 pip uninstall -y pytmatrix
 pip uninstall -y pytmatrix # just to be sure
 pip install -e . --no-build-isolation --force-reinstall

@@ -302,7 +302,7 @@ def test_radar():
             A_h_ref,
             A_v_ref,
         ),
-        strict=False,
+        strict=True,
     ):
         _assert_relative(val, ref)
 
