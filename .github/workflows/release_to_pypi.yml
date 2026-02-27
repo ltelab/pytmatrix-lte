@@ -38,7 +38,7 @@ jobs:
           CIBW_BEFORE_ALL_MACOS: "brew install gcc && mkdir -p $HOME/.local/bin && ln -sf $(find $(brew --prefix gcc)/bin -name 'gfortran-*' | head -n 1) $HOME/.local/bin/gfortran"
           CIBW_BEFORE_ALL_WINDOWS: "choco install mingw -y"
           CIBW_ENVIRONMENT_LINUX: "FC=gfortran"
-          CIBW_ENVIRONMENT_MACOS: "PATH=$HOME/.local/bin:$PATH FC=gfortran"
+          CIBW_ENVIRONMENT_MACOS: "PATH=$HOME/.local/bin:$PATH FC=gfortran MACOSX_DEPLOYMENT_TARGET=15.0" # macOS wheels will only support macOS 15+.
           # Pin C/C++/Fortran to MinGW toolchain to avoid MSVC/MinGW mixing.
           CIBW_ENVIRONMENT_WINDOWS: "CC=gcc CXX=g++ FC=gfortran"
           CIBW_BEFORE_BUILD_MACOS: "python -m pip install delocate"
