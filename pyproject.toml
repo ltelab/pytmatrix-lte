@@ -1,0 +1,80 @@
+[build-system]
+requires = [
+  "meson>1.2",
+  "meson-python>=0.15",
+  "numpy>=2.0.0",
+  "ninja",
+  # "Cython",#>=0.29.21",
+]
+build-backend = "mesonpy"
+
+[project]
+name = "pytmatrix"
+description = "T-matrix scattering computations"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+
+
+classifiers = [
+	"Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Operating System :: OS Independent",
+    "Operating System :: Unix",
+    "Operating System :: Microsoft",
+    "Operating System :: MacOS",
+    "Programming Language :: Fortran",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+]
+authors = [
+  { name = "Jussi Leinonen", email = "jsleinonen@gmail.com" }
+]
+
+version = "0.4.0"
+# dynamic = ['version']
+
+
+requires-python = ">=3.11"
+dependencies = ["numpy", "scipy", "pytest"]
+
+
+[project.optional-dependencies]
+dev = [
+	"pre-commit",
+	"setuptools",
+	"build",
+	"twine",
+]
+
+[tool.setuptools.packages.find]
+include = ["pytmatrix*"]
+
+
+[project.urls]
+Source = 'https://github.com/jleinonen/pytmatrix'
+Documentation = "https://github.com/jleinonen/pytmatrix/wiki"
+tracker = "https://github.com/jleinonen/pytmatrix/issues"
+download = "https://github.com/jleinonen/pytmatrix/releases"
+Homepage = 'https://github.com/jleinonen/pytmatrix'
+Repository = 'https://github.com/jleinonen/pytmatrix'
+Issues = "https://github.com/jleinonen/pytmatrix/issues"
+Changelog = "https://github.com/jleinonen/pytmatrix/blob/main/CHANGELOG.md"
+
+[tool.pytest.ini_options]
+testpaths = ["pytmatrix/tests"]
+pythonpath = ["."]
+
+
+
+
+

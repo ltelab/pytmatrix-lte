@@ -22,7 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import warnings
 from pytmatrix.fortran_tm import pytmatrix
-from pytmatrix.quadrature import quadrature
+from pytmatrix.quadrature import get_points_and_weights
 import pytmatrix.orientation as orientation
 
 
@@ -252,7 +252,7 @@ class Scatterer:
     def _init_orient(self):
         """Retrieve the quadrature points and weights if needed."""
         if self.orient == orientation.orient_averaged_fixed:
-            (self.beta_p, self.beta_w) = quadrature.get_points_and_weights(
+            (self.beta_p, self.beta_w) = get_points_and_weights(
                 self.or_pdf, 0, 180, self.n_beta
             )
         self._set_orient_signature()

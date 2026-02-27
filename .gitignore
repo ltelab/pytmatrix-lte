@@ -1,11 +1,14 @@
 *.bak
 *.o
 *.so
+
 dist
 build
 build.sh
 __pycache__/
 *.py[cod]
+*.pyc
+*.pyd
 
 # C extensions
 *.so
@@ -15,6 +18,7 @@ __pycache__/
 *.egg-info
 dist
 build
+build.log
 eggs
 parts
 bin
