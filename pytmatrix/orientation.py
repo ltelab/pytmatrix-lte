@@ -145,7 +145,7 @@ def orient_averaged_adaptive(tm):
     for i in ind:
         for j in ind:
             Z[i, j] = (
-                dblquad(Zfunc, 0.0, 360.0, lambda x: 0.0, lambda x: 180.0, (i, j))[0]  # noqa: ARG005  # noqa: ARG005
+                dblquad(Zfunc, 0.0, 360.0, lambda x: 0.0, lambda x: 180.0, (i, j))[0]  # noqa: ARG005 
                 / 360.0
             )
 

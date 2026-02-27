@@ -33,6 +33,7 @@ import numpy as np
 from scipy.integrate import trapezoid
 from scipy.special import gamma
 
+import pytmatrix
 from pytmatrix import scatter, tmatrix_aux
 
 
@@ -120,10 +121,10 @@ class ExponentialPSD(PSD):
         """
         psd = self.N0 * np.exp(-self.Lambda * D)
         if np.shape(D) == ():
-            if self.D_max < D:
+            if D > self.D_max:
                 return 0.0
         else:
-            psd[self.D_max < D] = 0.0
+            psd[D > self.D_max] = 0.0
         return psd
 
     def __eq__(self, other):
@@ -716,7 +717,7 @@ class PSDIntegrator:
             ),
             "python_version": sys.version[0:7],
             "numpy_version": np.__version__,
-            "tmatrix_version": tmatrix_aux.VERSION,
+            "tmatrix_version": getattr(pytmatrix, "__version__", "unknown"),
         }
         with open(fn, "wb") as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
@@ -739,7 +740,8 @@ class PSDIntegrator:
         with open(fn, "rb") as f:
             data = pickle.load(f)
 
-        if ("tmatrix_version" not in data) or (data["tmatrix_version"] != tmatrix_aux.VERSION):
+        current_version = getattr(pytmatrix, "__version__", "unknown")
+        if ("tmatrix_version" not in data) or (data["tmatrix_version"] != current_version):
             warnings.warn("Loading data saved with another version.", Warning, stacklevel=2)
 
         (

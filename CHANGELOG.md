@@ -1,6 +1,6 @@
 # Changelog
 
-## Version 0.0.4 - Meson Era
+## Version 0.4.2 - Meson Era
 
 ### Enhancements
 
