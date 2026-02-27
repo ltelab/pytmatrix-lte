@@ -49,11 +49,51 @@ pip install -e .
 To confirm that everything was installed correctly, run the built-in test suite:
 
 ```bash
-from pytmatrix.test import test_tmatrix
-test_tmatrix.run_tests()
+pytest pytmatrix/tests
+```
+
+or from Python:
+
+```python
+import pytmatrix
+pytmatrix.run_tests()
 ```
 
 The software should now be installed and ready to use.
+
+## Build artifacts
+
+To create source and wheel distributions for publishing:
+
+```bash
+python -m build
+```
+
+If you build without isolation, ensure `ninja` and `patchelf` are available on `PATH`:
+
+```bash
+python -m build --no-isolation --skip-dependency-check
+```
+
+## Upload to (Test)PyPI
+
+PyPI/TestPyPI reject wheels tagged `linux_x86_64`.
+You must upload either:
+
+- an `sdist` (`.tar.gz`) only, or
+- a repaired Linux wheel with a `manylinux_*` tag.
+
+Example:
+
+```bash
+# Upload source distribution only
+twine upload -r testpypi dist/*.tar.gz
+
+# Or repair wheel tag first (Linux)
+python -m pip install auditwheel
+auditwheel repair dist/*.whl -w dist/repaired
+twine upload -r testpypi dist/repaired/*.whl dist/*.tar.gz
+```
 
 ## Usage
 

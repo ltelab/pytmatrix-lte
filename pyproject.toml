@@ -1,10 +1,8 @@
 [build-system]
 requires = [
-  "meson>1.2",
-  "meson-python>=0.15",
+  "meson>=1.2",
+  "meson-python>=0.19.0",
   "numpy>=2.0.0",
-  "ninja",
-  # "Cython",#>=0.29.21",
 ]
 build-backend = "mesonpy"
 
@@ -56,9 +54,6 @@ dev = [
 	"twine",
 ]
 
-[tool.setuptools.packages.find]
-include = ["pytmatrix*"]
-
 
 [project.urls]
 Source = 'https://github.com/jleinonen/pytmatrix'
@@ -73,8 +68,6 @@ Changelog = "https://github.com/jleinonen/pytmatrix/blob/main/CHANGELOG.md"
 [tool.pytest.ini_options]
 testpaths = ["pytmatrix/tests"]
 pythonpath = ["."]
-
-
 
 
 

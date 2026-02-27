@@ -2,21 +2,6 @@
 # py.extension_module() place the compiled .so/.pyd inside pytmatrix/fortran_tm
 # meson-python supports editable installs by building into a build/<abi>/ directory and then exposing it to Python
 
-# Requirements 
-
-# conda install meson meson-python ninja
-
-# Install in edit mode 
-# pip uninstall -y pytmatrix
-# pip uninstall -y pytmatrix
-# pip install -e . --no-build-isolation
-# pytest 
-
-# pip install -e . 
-# pip install -U build
-
- 
-
 project(
   'pytmatrix',
   ['c', 'fortran'],
@@ -28,6 +13,38 @@ project(
 py_mod = import('python')
 py = py_mod.find_installation(pure: false)
 py_dep = py.dependency()
+
+# Keep warning suppression scoped to the wrapped legacy backend only.
+backend_c_args = []
+backend_fortran_args = []
+
+if meson.get_compiler('c').get_id() == 'gcc'
+  # f2py-generated C wrappers trigger this frequently.
+  backend_c_args += [
+    '-Wno-cast-function-type',
+    '-Wno-missing-field-initializers',
+    '-Wno-unused-parameter',
+    '-Wno-unused-function',
+    '-Wno-misleading-indentation',
+    '-Wno-incompatible-pointer-types',
+  ]
+endif
+
+if meson.get_compiler('fortran').get_id() == 'gcc'
+  # The bundled legacy Fortran/LAPACK-style code is warning-heavy but stable.
+  backend_fortran_args += [
+    '-std=legacy',
+    '-Wno-unused-parameter',
+    '-Wno-unused-variable',
+    '-Wno-unused-dummy-argument',
+    '-Wno-unused-label',
+    '-Wno-conversion',
+    '-Wno-compare-reals',
+    '-Wno-function-elimination',
+    '-Wno-maybe-uninitialized',
+    '-Wno-surprising',
+  ]
+endif
 
 # Ask the active Python for NumPy include dirs (works in venvs too).
 incdir_numpy = run_command(
@@ -77,6 +94,8 @@ py.extension_module(
   ],
   include_directories: inc_np,
   dependencies: py_dep,
+  c_args: backend_c_args,
+  fortran_args: backend_fortran_args,
   install: true,
   subdir: 'pytmatrix/fortran_tm',
 )
@@ -93,7 +112,6 @@ py.install_sources(
     'pytmatrix/scatter.py',
     'pytmatrix/tmatrix.py',
     'pytmatrix/tmatrix_aux.py',
-    'pytmatrix/tmatrix_psd.py',
     'pytmatrix/quadrature.py',
   ],
   subdir: 'pytmatrix',

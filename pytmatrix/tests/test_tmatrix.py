@@ -22,7 +22,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 import numpy as np
 import pytest
 from pytmatrix.tmatrix import TMatrix, Scatterer
-from pytmatrix.tmatrix_psd import TMatrixPSD
 from pytmatrix import orientation
 from pytmatrix import radar
 from pytmatrix import refractive
@@ -249,18 +248,24 @@ def test_psd():
 
 def test_radar():
     """Test that the radar properties are computed correctly"""
-    tm = TMatrixPSD(
-        lam=tmatrix_aux.wl_C,
+    tm = Scatterer(
+        wavelength=tmatrix_aux.wl_C,
         m=refractive.m_w_10C[tmatrix_aux.wl_C],
         suppress_warning=True,
     )
+    tm.psd_integrator = psd.PSDIntegrator()
+    tm.psd_integrator.num_points = 500
     tm.psd = psd.GammaPSD(D0=2.0, Nw=1e3, mu=4)
-    tm.psd_eps_func = lambda D: 1.0 / drop_ar(D)
-    tm.D_max = 10.0
+    tm.psd_integrator.axis_ratio_func = lambda D: 1.0 / drop_ar(D)
+    tm.psd_integrator.D_max = 10.0
     tm.or_pdf = orientation.gaussian_pdf(20.0)
     tm.orient = orientation.orient_averaged_fixed
-    tm.geometries = (tmatrix_aux.geom_horiz_back, tmatrix_aux.geom_horiz_forw)
-    tm.init_scatter_table()
+    tm.psd_integrator.geometries = (
+        tmatrix_aux.geom_horiz_back,
+        tmatrix_aux.geom_horiz_forw,
+    )
+    tm.set_geometry(tmatrix_aux.geom_horiz_back)
+    tm.psd_integrator.init_scatter_table(tm)
 
     radar_xsect_h = radar.radar_xsect(tm)
     Z_h = radar.refl(tm)
@@ -415,4 +420,3 @@ def test_attn_polarization():
     _assert_less(0, radar.Ai(sca, h_pol=False))
     # Check that we have differential attenuation
     _assert_less(radar.Ai(sca, h_pol=False), radar.Ai(sca, h_pol=True))
-
