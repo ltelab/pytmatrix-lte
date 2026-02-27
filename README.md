@@ -27,11 +27,6 @@ Check that it works:
 
 ```bash
 python -c "import pytmatrix; print(pytmatrix.__version__)"
-```
-
-Optional: run the test suite:
-
-```bash
 python -c "import pytmatrix; raise SystemExit(pytmatrix.run_tests())"
 ```
 
