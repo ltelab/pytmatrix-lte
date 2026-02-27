@@ -5,7 +5,7 @@
 project(
   'pytmatrix',
   ['c', 'fortran'],
-  version: '0.4.3',
+  version: '0.4.4',
   meson_version: '>=0.64.0',
   default_options: ['warning_level=2'],
 )
