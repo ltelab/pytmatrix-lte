@@ -37,9 +37,7 @@ classifiers = [
 authors = [
   { name = "Jussi Leinonen", email = "jsleinonen@gmail.com" }
 ]
-
-version = "0.4.0"
-# dynamic = ['version']
+dynamic = ['version']
 
 
 requires-python = ">=3.11"
@@ -70,4 +68,130 @@ testpaths = ["pytmatrix/tests"]
 pythonpath = ["."]
 
 
+[tool.black]
+line-length = 120
+preview = true
 
+[tool.ruff]
+
+line-length = 120
+indent-width = 4
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "docs",
+    "dist",
+    "node_modules",
+    "venv",
+]
+
+[tool.ruff.format]
+
+# Enable reformatting of code snippets in docstrings.
+docstring-code-format = true
+
+[tool.ruff.lint]
+
+select = [
+	# pydocstyle
+    "D",
+    # Pyflakes
+    "F",
+    # pycodestyle
+    "E",
+    "W",
+    # isort
+    "I",
+    # pyupgrade
+    "UP",
+    # flake8-quotes
+    "Q",
+    # flake8-bugbear
+    "B",
+    # flake8-return
+    "RET",
+    # flake8-unused-arguments
+    "ARG",
+    # flake8-raise
+    "RSE",
+    # flake8-pytest-style
+    "PT",
+    # flake8-simplify
+    "SIM",
+    # Perflint
+    "PERF",
+    # pandas-vet
+    "PD",
+    # pylint
+    "PL",
+    # flake8-commas
+    "COM",
+    # flake8-slots
+    "SLOT",
+    # flake8-comprehensions
+    "C4",
+    # Ruff custom rules
+    "RUF"
+
+    #---------------------
+    #### Future rules ####
+    # flake8-use-pathlib
+    # "PTH",
+    # NumPy-specific rules  (for 2.0)
+    # "NPY",
+    # refurb
+    # "FURB", # require preview
+]
+ignore = [
+    "E722",
+    "PT011", # pytest raised error must be checked if match the expected error msg
+    "PT030",
+    "PERF203",
+	"PLW2901",
+    "B904",
+	"RET504",
+    #  "PD901",
+    "RUF043",
+    "PLC0415",
+    "PLC0206",
+    "PLW1641",
+    "RUF059",
+
+    # Docstyle Rules
+    "D100", # Missing docstring in public module
+    "D404", # Docstring can't start with "This"
+    "D401", # First sentence must be in imperative mood
+
+    # Complexity rules
+    "PLR0913",
+    "PLR2004",
+    "PLR0912",
+    "PLR0915",
+]
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.codespell]
+ignore-words-list = "thet"
