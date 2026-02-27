@@ -1,27 +1,23 @@
-"""
-Copyright (C) 2009-2023 Jussi Leinonen, Finnish Meteorological Institute,
-California Institute of Technology
+# Copyright (C) 2009-2015 Jussi Leinonen, Finnish Meteorological Institute,
+# California Institute of Technology
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
+# Permission is hereby granted, free of charge, to any person obtaining a copy of
+# this software and associated documentation files (the "Software"), to deal in
+# the Software without restriction, including without limitation the rights to
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+# the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-"""
-
-# Current version
-VERSION = "0.3.3"
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+# FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""Auxiliary constants and empirical relations for pytmatrix."""
 
 # Typical wavelengths [mm] at different bands
 wl_S = 111.0
@@ -47,64 +43,74 @@ geom_vert_forw = (180.0, 180.0, 0.0, 0.0, 0.0, 0.0)  # vert. forward scatter
 
 
 def dsr_thurai_2007(D_eq):
-    """
-    Drop shape relationship function from Thurai2007
-    (http://dx.doi.org/10.1175/JTECH2051.1) paper.
-    Arguments:
-        D_eq: Drop volume-equivalent diameter (mm)
+    """Return drop axis ratio using the Thurai et al. (2007) relation.
 
-    Returns:
-        r: The vertical-to-horizontal drop axis ratio. Note: the Scatterer class
-        expects horizontal to vertical, so you should pass 1/dsr_thurai_2007
-    """
+    Parameters
+    ----------
+    D_eq : float
+        Drop volume-equivalent diameter in millimeters.
 
+    Returns
+    -------
+    float
+        Vertical-to-horizontal drop axis ratio.
+
+    Notes
+    -----
+    :class:`pytmatrix.tmatrix.Scatterer` expects the inverse ratio
+    (horizontal-to-vertical), so use ``1.0 / dsr_thurai_2007(D_eq)`` when
+    assigning ``axis_ratio``.
+
+    References
+    ----------
+    Thurai, M., et al. (2007), doi:10.1175/JTECH2051.1
+    """
     if D_eq < 0.7:
         return 1.0
-    elif D_eq < 1.5:
-        return (
-            1.173
-            - 0.5165 * D_eq
-            + 0.4698 * D_eq**2
-            - 0.1317 * D_eq**3
-            - 8.5e-3 * D_eq**4
-        )
-    else:
-        return (
-            1.065
-            - 6.25e-2 * D_eq
-            - 3.99e-3 * D_eq**2
-            + 7.66e-4 * D_eq**3
-            - 4.095e-5 * D_eq**4
-        )
+    if D_eq < 1.5:
+        return 1.173 - 0.5165 * D_eq + 0.4698 * D_eq**2 - 0.1317 * D_eq**3 - 8.5e-3 * D_eq**4
+    return 1.065 - 6.25e-2 * D_eq - 3.99e-3 * D_eq**2 + 7.66e-4 * D_eq**3 - 4.095e-5 * D_eq**4
 
 
 def dsr_pb(D_eq):
-    """
-    Pruppacher and Beard drop shape relationship function.
+    """Return drop axis ratio using the Pruppacher-Beard linear relation.
 
-    Arguments:
-        D_eq: Drop volume-equivalent diameter (mm)
-    Returns:
-        r: The vertical-to-horizontal drop axis ratio. Note: the Scatterer class
-        expects horizontal to vertical, so you should pass 1/dsr_pb
+    Parameters
+    ----------
+    D_eq : float
+        Drop volume-equivalent diameter in millimeters.
+
+    Returns
+    -------
+    float
+        Vertical-to-horizontal drop axis ratio.
+
+    Notes
+    -----
+    :class:`pytmatrix.tmatrix.Scatterer` expects the inverse ratio
+    (horizontal-to-vertical), so use ``1.0 / dsr_pb(D_eq)`` when assigning
+    ``axis_ratio``.
     """
     return 1.03 - 0.062 * D_eq
 
 
 def dsr_bc(D_eq):
-    """
-    Beard and Chuang drop shape relationship function.
-    Arguments:
-        D_eq: Drop volume-equivalent diameter (mm)
-    Returns:
-        r: The vertical-to-horizontal drop axis ratio. Note: the Scatterer class
-        expects horizontal to vertical, so you should pass 1/dsr_bc
-    """
+    """Return drop axis ratio using the Beard-Chuang polynomial relation.
 
-    return (
-        1.0048
-        + 5.7e-04 * D_eq
-        - 2.628e-02 * D_eq**2
-        + 3.682e-03 * D_eq**3
-        - 1.677e-04 * D_eq**4
-    )
+    Parameters
+    ----------
+    D_eq : float
+        Drop volume-equivalent diameter in millimeters.
+
+    Returns
+    -------
+    float
+        Vertical-to-horizontal drop axis ratio.
+
+    Notes
+    -----
+    :class:`pytmatrix.tmatrix.Scatterer` expects the inverse ratio
+    (horizontal-to-vertical), so use ``1.0 / dsr_bc(D_eq)`` when assigning
+    ``axis_ratio``.
+    """
+    return 1.0048 + 5.7e-04 * D_eq - 2.628e-02 * D_eq**2 + 3.682e-03 * D_eq**3 - 1.677e-04 * D_eq**4

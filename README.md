@@ -1,61 +1,59 @@
 # PyTMatrix-LTE
 
-A Python library for computing the scattering properties of homogeneous nonspherical scatterers with the _T_-Matrix method.\
-Uses the [T-Matrix code by M. I. Mishchenko and L. D. Travis](http://www.giss.nasa.gov/staff/mmishchenko/t_matrix.html).
+`pytmatrix-lte` is a Python package to simulate how particles scatter electromagnetic waves (for example in radar applications).
 
-This is repository adapted the original PyTMatrix code by Jussi Leinonen, which can be found [here](https://github.com/jleinonen/pytmatrix), to run with newer versions of python:
-installation of the original code was buggy for `python>3.6`, fully deprecated for `python>3.12` and `numpy>2`.
+This project is a maintained update of the original [jleinonen/pytmatrix](https://github.com/jleinonen/pytmatrix) so it works with modern Python versions.
 
-The code adaptations include:
+## Quick Install
 
-- Migration from distutils to setuptools (setup.py rewritten)
-- Migration of certain scipy functions to new names
-- Optimization and vectorization of some computations
+You need:
 
-## Installation
+- Python 3.11 or newer
+- `gfortran` installed on your computer
 
-The installation instructions in the original pytmatrix library are outdated and **do not** work for recent python versions (`python>3.6`).
-
-The instructions below describe how to install the **LTE-maintained fork of pyTMatrix**, which is compatible with modern Python interpreters.
-
-**WARNING**: Installing pyTMatrix directly via `pip install git+https://github.com/ltelab/pytmatrix-lte.git` does not work at this time. We welcome contributions to enable this type of installation !
-
-### 1. Install dependencies
-
-Make sure you have the GNU Fortran Compiler (`gfortran`) and the Meson build system installed. You can install them via conda:
+Install `gfortran` (example with conda):
 
 ```bash
-conda install -c conda-forge gfortran meson
+conda install -c conda-forge gfortran
 ```
 
-### 2. Clone the repository
-
-Fork and clone the LTE-maintained pyTMatrix repository:
+Install the package:
 
 ```bash
-git clone https://github.com/<your-account>/pytmatrix-lte.git
+pip install git+https://github.com/ltelab/pytmatrix-lte.git
 ```
 
-### 3. Install the package
-
-Navigate into the cloned repository and install the package in editable mode:
+Check that it works:
 
 ```bash
-cd pytmatrix-lte
-pip install -e .
+python -c "import pytmatrix; print(pytmatrix.__version__)"
 ```
 
-### 4. Run tests
-
-To confirm that everything was installed correctly, run the built-in test suite:
+Optional: run the test suite:
 
 ```bash
-from pytmatrix.test import test_tmatrix
-test_tmatrix.run_tests()
+python -c "import pytmatrix; raise SystemExit(pytmatrix.run_tests())"
 ```
-
-The software should now be installed and ready to use.
 
 ## Usage
 
-See the [usage instructions](https://github.com/jleinonen/pytmatrix/wiki) in the original wiki.
+See the usage wiki:
+[PyTMatrix Wiki](https://github.com/jleinonen/pytmatrix/wiki)
+
+## For Developers
+
+If you want to contribute and edit the code locally:
+
+```bash
+micromamba install -c conda-forge gfortran meson meson-python ninja numpy scipy pytest
+pip install -e . --no-build-isolation --force-reinstall
+pytest
+```
+
+## Note for Python 3.13t/3.14t
+
+If you use free-threaded Python, run commands with GIL enabled:
+
+```bash
+PYTHON_GIL=1 python -m pytest
+```

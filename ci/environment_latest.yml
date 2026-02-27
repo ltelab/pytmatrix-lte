@@ -1,0 +1,13 @@
+name: pytmatrix
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - scipy
+  - gfortran
+  - meson
+  - meson-python
+  - pytest
+  - setuptools
+  - pre_commit
+  - pip
