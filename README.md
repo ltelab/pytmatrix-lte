@@ -42,11 +42,16 @@ the GIL enabled for safety (`PYTHON_GIL=1` or `python -X gil=1`).
 
 ### 4. Run tests
 
-To confirm that everything was installed correctly, run the test suite:
+To confirm that everything was installed correctly, run the test suite from the command line:
+
+```bash
+python -c "import pytmatrix; pytmatrix.run_tests()"
+```
+
+or in python:
 
 ```python
 import pytmatrix
-
 pytmatrix.run_tests()
 ```
 
