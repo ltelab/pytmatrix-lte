@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest", "macos-13", "windows-latest"]
+        os: ["ubuntu-latest", "macos-15-intel", "windows-latest"]
 
     steps:
       - uses: actions/checkout@v6
@@ -29,9 +29,9 @@ jobs:
       - name: Build wheels
         env:
           CIBW_BUILD: "cp311-* cp312-* cp313-* cp314-*"
-          CIBW_SKIP: "cp3??t-* pp* *-musllinux_* *_i686 *-win32"
+          CIBW_SKIP: "cp3??t-* *-musllinux_* *_i686 *-win32"
           CIBW_ARCHS_LINUX: "x86_64"
-          # macos-13 runner is Intel; avoid unstable Fortran cross-arch builds.
+          # macOS Intel runner: avoid unstable Fortran cross-arch builds.
           CIBW_ARCHS_MACOS: "x86_64"
           CIBW_ARCHS_WINDOWS: "AMD64"
           CIBW_BEFORE_ALL_LINUX: "bash -c 'if command -v dnf >/dev/null 2>&1; then dnf install -y gcc-gfortran; else yum install -y gcc-gfortran; fi'"
